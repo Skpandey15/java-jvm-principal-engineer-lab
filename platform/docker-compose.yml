@@ -27,7 +27,7 @@ services:
       retries: 10
 
   kafka:
-    # Single-node KRaft broker; version matches the Kafka client managed by Spring Boot 4.1.1
+    # Single-node KRaft broker. Broker 4.3.1 is ahead of the Boot-managed client (4.2.1); newer brokers support older clients
     image: apache/kafka:4.3.1
     ports:
       - "19092:19092"

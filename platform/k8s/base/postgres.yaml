@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:18.1
+          image: postgres:18.4
           env:
             - name: POSTGRES_DB
               value: lab
