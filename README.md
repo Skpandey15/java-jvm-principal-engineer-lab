@@ -58,8 +58,20 @@ Host ports use a lab-specific range so the lab runs next to other local stacks t
 | `load-tests/` | k6 scripts |
 | `platform/` | docker compose, Toxiproxy config, kind/Kustomize manifests, observability |
 | `docs/` | Roadmap, ADRs, incident reports, interview-defense log, readiness scorecard |
+| `postman/` | Postman collection (orders, payment stub, Toxiproxy faults, actuator evidence, Keycloak) + `local`/`kind` environments |
 | `.github/` | CI/CD pipeline, CodeQL, Dependabot (see below) |
 | `scripts/diagnose.sh` | Capture a JVM evidence bundle (flags, heap, threads, NMT, JFR) from a PID |
+
+## Postman
+
+Import `postman/jvm-lab.postman_collection.json` plus `postman/local.postman_environment.json`
+(or `kind.postman_environment.json` for the WP-09 cluster). Folders: Orders · Payment stub · Toxiproxy (fault
+injection) · Actuator (evidence) · Keycloak. Every request has assertions, so the whole collection doubles as a
+local end-to-end check:
+
+```bash
+npx newman run postman/jvm-lab.postman_collection.json -e postman/local.postman_environment.json
+```
 
 ## Useful commands
 

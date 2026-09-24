@@ -11,6 +11,9 @@ assertj = "3.27.7"         # same as the Spring Boot 4.1.1 BOM
 jmh = "1.37"
 jmh-gradle-plugin = "0.7.3"
 resilience4j = "2.4.0"
+# Security override (ADR-001): Boot 4.1.1 manages 11.0.24, which has 3 critical CVEs fixed in 11.0.25.
+# Remove this and the constraints in lab.spring-boot-conventions once Spring Boot manages >= 11.0.25.
+tomcat = "11.0.26"
 
 [libraries]
 # Gradle plugins used by build-logic
@@ -39,7 +42,11 @@ boot-starter-opentelemetry = { module = "org.springframework.boot:spring-boot-st
 boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 
-micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+tomcat-embed-core = { module = "org.apache.tomcat.embed:tomcat-embed-core", version.ref = "tomcat" }
+tomcat-embed-el = { module = "org.apache.tomcat.embed:tomcat-embed-el", version.ref = "tomcat" }
+tomcat-embed-websocket = { module = "org.apache.tomcat.embed:tomcat-embed-websocket", version.ref = "tomcat" }
+
+micrometer-registry-prometheus ={ module = "io.micrometer:micrometer-registry-prometheus" }
 postgresql = { module = "org.postgresql:postgresql" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine" }

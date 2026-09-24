@@ -1,0 +1,736 @@
+{
+  "info": {
+    "name": "Java JVM Principal Engineer Lab",
+    "description": "Requests for the lab's reference service, fault injection and runtime evidence.\n\nImport this file plus an environment from `postman/`, then select **jvm-lab local** (or **jvm-lab kind** for the WP-09 cluster). Ports follow the port map in README.md.\n\nCommand line: `npx newman run postman/jvm-lab.postman_collection.json -e postman/local.postman_environment.json`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Orders",
+      "description": "order-service REST API (reference service, all WPs).",
+      "item": [
+        {
+          "name": "Create order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{orderServiceUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"totalAmount\": 42.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Creates an order and stores its id in the `orderId` collection variable for the following requests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const order = pm.response.json();",
+                  "pm.test('status is CREATED', () => pm.expect(order.status).to.eql('CREATED'));",
+                  "pm.test('Location header points at the order', () => pm.expect(pm.response.headers.get('Location')).to.eql('/orders/' + order.id));",
+                  "pm.collectionVariables.set('orderId', order.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/orders/{{orderId}}",
+            "description": "Run **Create order** first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('same order', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('orderId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get unknown order (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/orders/00000000-0000-0000-0000-000000000000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create order - validation error (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{orderServiceUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"\",\n  \"totalAmount\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Blank customer and zero amount violate the bean-validation constraints."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payment stub",
+      "description": "Controllable downstream dependency (WP-04, WP-08, WP-10). `paymentUrl` calls it directly; `paymentViaToxiproxyUrl` puts Toxiproxy in the path so toxics apply.",
+      "item": [
+        {
+          "name": "Pay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{paymentUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 42.5,\n  \"idempotencyKey\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('approved', () => pm.expect(pm.response.json().status).to.eql('APPROVED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay via Toxiproxy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{paymentViaToxiproxyUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 42.5,\n  \"idempotencyKey\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Same call through the `payment` proxy. Compare response times with and without a latency toxic."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get behaviour",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{paymentUrl}}/admin/behaviour"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set behaviour - slow and flaky",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{paymentUrl}}/admin/behaviour?latencyMs=2000&failureRate=0.3&maxConcurrent=5",
+            "description": "2 s latency, 30% HTTP 503, at most 5 concurrent requests (the rest queue). Drives timeout, retry and circuit-breaker labs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('applied', () => pm.expect(pm.response.json().latencyMs).to.eql(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set behaviour - reset to healthy",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{paymentUrl}}/admin/behaviour?latencyMs=50&failureRate=0&maxConcurrent=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('healthy defaults', () => pm.expect(pm.response.json()).to.eql({latencyMs: 50, failureRate: 0, maxConcurrent: 20}));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Toxiproxy (fault injection)",
+      "description": "Toxiproxy API. Proxies: `postgres` (host :25432 -> PostgreSQL) and `payment` (host :28081 -> payment-stub). For DB faults, start order-service with `--spring.datasource.url=jdbc:postgresql://localhost:25432/lab`. Run **Reset all toxics** after each experiment.",
+      "item": [
+        {
+          "name": "List proxies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{toxiproxyUrl}}/proxies"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('postgres and payment proxies exist', () => pm.expect(pm.response.json()).to.have.all.keys('postgres', 'payment'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DB - add 500 ms latency",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{toxiproxyUrl}}/proxies/postgres/toxics",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"db_latency\",\n  \"type\": \"latency\",\n  \"stream\": \"downstream\",\n  \"attributes\": {\n    \"latency\": 500,\n    \"jitter\": 50\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "WP-06/09: slower queries hold connections longer, Hikari pending rises, then p99 rises."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DB - remove latency",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{toxiproxyUrl}}/proxies/postgres/toxics/db_latency"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment - add 1 s latency",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{toxiproxyUrl}}/proxies/payment/toxics",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"payment_latency\",\n  \"type\": \"latency\",\n  \"stream\": \"downstream\",\n  \"attributes\": {\n    \"latency\": 1000\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment - remove latency",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{toxiproxyUrl}}/proxies/payment/toxics/payment_latency"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment - black hole (timeout toxic)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{toxiproxyUrl}}/proxies/payment/toxics",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"payment_blackhole\",\n  \"type\": \"timeout\",\n  \"stream\": \"downstream\",\n  \"attributes\": {\n    \"timeout\": 0\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Accepts connections and never answers: the 'slow downstream without timeout' failure (WP-04/08)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment - remove black hole",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{toxiproxyUrl}}/proxies/payment/toxics/payment_blackhole"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset all toxics",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{toxiproxyUrl}}/reset",
+            "description": "Removes every toxic and re-enables all proxies."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Actuator (evidence)",
+      "description": "Runtime evidence from order-service (WP-02/06/07/09).",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/health/readiness"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/health/liveness"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prometheus scrape",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/prometheus"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('exposes Hikari metrics', () => pm.expect(pm.response.text()).to.include('hikaricp_connections'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "hikaricp.connections.active",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/metrics/hikaricp.connections.active",
+            "description": "Connections in use. Equal to the max pool size means the pool is saturated."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "hikaricp.connections.pending",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/metrics/hikaricp.connections.pending",
+            "description": "Threads waiting for a connection. Above 0 under load means the DB pool is the bottleneck."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "http.server.requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/metrics/http.server.requests",
+            "description": "Request count and timing. Add `?tag=uri:/orders` to filter."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "jvm.memory.used",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/metrics/jvm.memory.used",
+            "description": "Add `?tag=area:heap` or `?tag=area:nonheap`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "jvm.gc.pause",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/metrics/jvm.gc.pause",
+            "description": "GC pause count and total time."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "jvm.threads.live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/actuator/metrics/jvm.threads.live",
+            "description": "Live platform threads (virtual threads are not counted here)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Keycloak (WP-08)",
+      "description": "Local OIDC provider. The lab realm and client are created in WP-08; the admin token request works out of the box.",
+      "item": [
+        {
+          "name": "Admin token (master realm)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/master/protocol/openid-connect/token",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "admin-cli",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{keycloakAdminUser}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{keycloakAdminPassword}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "Stores the token in `keycloakAdminToken` for Keycloak admin API calls."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has access token', () => pm.expect(pm.response.json().access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('keycloakAdminToken', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "customerId",
+      "value": "customer-1"
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "keycloakAdminToken",
+      "value": ""
+    }
+  ]
+}

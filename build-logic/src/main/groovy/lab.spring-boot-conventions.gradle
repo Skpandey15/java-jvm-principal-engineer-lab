@@ -15,6 +15,17 @@ dependencies {
     testImplementation bom
     developmentOnly bom
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // Security override (docs/adrs/ADR-001): raise Tomcat above the Boot-managed version.
+    // Constraints only apply when Tomcat is on the classpath; remove once the Boot BOM catches up.
+    def libs = project.extensions.getByType(VersionCatalogsExtension).named('libs')
+    constraints {
+        ['tomcat-embed-core', 'tomcat-embed-el', 'tomcat-embed-websocket'].each { alias ->
+            implementation(libs.findLibrary(alias).get()) {
+                because 'CVE-2026-65182, CVE-2026-65905, CVE-2026-68525 (critical) are fixed in Tomcat 11.0.25'
+            }
+        }
+    }
 }
 
 springBoot {
