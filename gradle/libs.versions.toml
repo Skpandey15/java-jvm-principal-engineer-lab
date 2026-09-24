@@ -15,11 +15,15 @@ otel-logback-appender = "2.28.0-alpha"   # requires OpenTelemetry API 1.62.0 = t
 # Security override (ADR-001): Boot 4.1.1 manages 11.0.24, which has 3 critical CVEs fixed in 11.0.25.
 # Remove this and the constraints in lab.spring-boot-conventions once Spring Boot manages >= 11.0.25.
 tomcat = "11.0.26"
+# Build-classpath security fix: spring-boot-gradle-plugin 4.1.1 -> commons-compress 1.27.1 -> commons-lang3 3.16.0,
+# inside the vulnerable range (< 3.18.0). Build tooling only; the application already resolves 3.20.0.
+commons-lang3 = "3.20.0"
 
 [libraries]
 # Gradle plugins used by build-logic
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
 jmh-gradle-plugin = { module = "me.champeau.jmh:jmh-gradle-plugin", version.ref = "jmh-gradle-plugin" }
+commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
 
 # Testing for plain Java projects (Spring projects also get these from the Boot BOM)
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }

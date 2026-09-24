@@ -6,4 +6,11 @@ plugins {
 dependencies {
     implementation libs.spring.boot.gradle.plugin
     implementation libs.jmh.gradle.plugin
+
+    constraints {
+        // Plugin classpath runs on every developer and CI machine, so it gets the same CVE hygiene as the app
+        implementation(libs.commons.lang3) {
+            because 'spring-boot-gradle-plugin 4.1.1 pulls commons-lang3 3.16.0 (vulnerable range < 3.18.0)'
+        }
+    }
 }

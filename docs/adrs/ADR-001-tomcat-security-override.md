@@ -38,3 +38,10 @@ inside the same minor line is low risk, and the full test suite plus the kind sm
 - `./gradlew :reference-service:order-service:dependencyInsight --dependency tomcat-embed-core` shows the override and its reason.
 - **Exit criterion:** when a Spring Boot release manages Tomcat >= 11.0.25 (Dependabot will propose the Boot upgrade),
   delete the `tomcat` version and the constraints, and mark this ADR *Superseded*.
+
+## Related override: build classpath (2026-09-24)
+
+Dependabot's security job flagged `commons-lang3` below 3.18.0. The application already resolved 3.20.0; the vulnerable
+3.16.0 was on the **build plugin classpath** (`spring-boot-gradle-plugin 4.1.1 -> commons-compress 1.27.1 -> commons-lang3`),
+which runs on every developer and CI machine. A constraint in `build-logic/build.gradle` (version key `commons-lang3`)
+raises it to 3.20.0. Same exit criterion: remove once the Spring Boot Gradle plugin no longer brings a vulnerable version.
