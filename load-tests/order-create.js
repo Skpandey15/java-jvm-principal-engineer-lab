@@ -2,8 +2,9 @@
 // constant-arrival-rate keeps sending requests at the target rate even when the service slows down,
 // which avoids coordinated omission (a closed model would quietly send fewer requests).
 //
-//   k6 run load-tests/order-create.js
-//   k6 run -e RATE=200 -e DURATION=5m load-tests/order-create.js
+//   load-tests/run-k6.sh                          (Docker; results go to Prometheus/Grafana)
+//   RATE=200 DURATION=5m load-tests/run-k6.sh
+//   k6 run load-tests/order-create.js             (native k6, results in the terminal only)
 import http from 'k6/http';
 import { check } from 'k6';
 

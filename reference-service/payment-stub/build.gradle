@@ -7,6 +7,7 @@ description = 'Controllable downstream dependency for timeout/retry/circuit-brea
 dependencies {
     implementation libs.boot.starter.webmvc
     implementation libs.boot.starter.actuator
+    implementation libs.micrometer.registry.prometheus
 
     testImplementation libs.boot.starter.test
 }

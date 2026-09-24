@@ -1,6 +1,11 @@
 // JMH benchmarks (WP-03, WP-05, WP-07).
-//   ./gradlew :benchmarks:jmh                         run all
-//   ./gradlew :benchmarks:jmh -Pjmh.includes=HashMap  run matching benchmarks
+//   ./gradlew :benchmarks:jmh                                        run all
+//   ./gradlew :benchmarks:jmh -Pjmh.includes=HashMap                 run matching benchmarks
+//   ./gradlew :benchmarks:jmh -Pjmh.includes=HashMap -Pjmh.profilers=gc,stack
+//        gc    = allocation rate per operation (B/op) and GC count: explains *why* one variant is faster
+//        stack = where threads spend time; jfr = a JFR recording per benchmark (open in JMC)
+//        perfasm/perfnorm need Linux perf (run in a container)
+// Results: benchmarks/build/results/jmh/results.json (commit the ones you cite under wp-*/notes/)
 plugins {
     id 'lab.java-conventions'
     id 'me.champeau.jmh'
@@ -8,11 +13,15 @@ plugins {
 
 def libs = extensions.getByType(VersionCatalogsExtension).named('libs')
 def jmhIncludes = providers.gradleProperty('jmh.includes').orNull
+def jmhProfilers = providers.gradleProperty('jmh.profilers').orNull
 
 jmh {
     jmhVersion = libs.findVersion('jmh').get().requiredVersion
     if (jmhIncludes) {
         includes = [jmhIncludes]
+    }
+    if (jmhProfilers) {
+        profilers = jmhProfilers.split(',').collect { it.trim() }
     }
     warmupIterations = 3
     iterations = 5

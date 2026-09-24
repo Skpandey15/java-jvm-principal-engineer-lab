@@ -1,0 +1,40 @@
+# Replaces /otel-lgtm/prometheus.yaml in grafana/otel-lgtm 0.33.1: the image defaults (global, otlp, storage)
+# plus scrape jobs for the lab. Re-check this against the image's file when upgrading otel-lgtm.
+---
+global:
+  scrape_interval: 5s          # lab resolution; production commonly uses 15-30s
+  scrape_native_histograms: true
+  # Keep classic buckets (le labels) even when a target also offers native histograms,
+  # so histogram_quantile() over *_bucket works for every service.
+  always_scrape_classic_histograms: true
+otlp:
+  keep_identifying_resource_attributes: true
+  promote_resource_attributes:
+    - service.instance.id
+    - service.name
+    - service.namespace
+    - service.version
+    - deployment.environment.name
+    - k8s.namespace.name
+    - k8s.pod.name
+    - host.name
+storage:
+  tsdb:
+    out_of_order_time_window: 10m
+
+scrape_configs:
+  # Spring Boot services running on the host (./gradlew bootRun). OpenMetrics format carries exemplars (trace_id).
+  - job_name: order-service
+    metrics_path: /actuator/prometheus
+    scrape_protocols: [OpenMetricsText1.0.0, PrometheusProto, PrometheusText0.0.4]
+    static_configs:
+      - targets: ["host.docker.internal:18080"]
+  - job_name: payment-stub
+    metrics_path: /actuator/prometheus
+    scrape_protocols: [OpenMetricsText1.0.0, PrometheusProto, PrometheusText0.0.4]
+    static_configs:
+      - targets: ["host.docker.internal:18081"]
+  # PostgreSQL server + pg_stat_statements (WP-06 query evidence)
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]

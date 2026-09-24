@@ -22,7 +22,8 @@ runtime, framework and infrastructure versions stay fixed. The lab document (v1.
 | Cache | Valkey 9.1 | compose |
 | Identity | Keycloak 26.7.4 | compose |
 | Fault injection | Toxiproxy 2.12.0 | compose |
-| Observability | grafana/otel-lgtm 0.33.1 | compose |
+| Observability | grafana/otel-lgtm 0.33.1, postgres-exporter v0.20.1, OTel Logback appender 2.28.0-alpha | compose, `libs.versions.toml` |
+| Load testing | k6 1.2.3 (`grafana/k6` image) | `load-tests/run-k6.sh` |
 | Benchmarks | JMH 1.37 via me.champeau.jmh 0.7.3 | `libs.versions.toml` |
 | Container image | Layered-jar Dockerfile on `eclipse-temurin:25-jdk-noble` (JRE optional), non-root | `platform/docker/spring-boot.Dockerfile` |
 | CI/CD | GitHub Actions, actions pinned by commit SHA | `.github/workflows/` |

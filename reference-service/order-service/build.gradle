@@ -12,6 +12,7 @@ dependencies {
     implementation libs.boot.starter.flyway
     implementation libs.boot.starter.opentelemetry
     implementation libs.micrometer.registry.prometheus
+    implementation libs.otel.logback.appender
     implementation libs.flyway.postgresql
     runtimeOnly libs.postgresql
 

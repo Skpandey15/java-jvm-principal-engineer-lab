@@ -22,7 +22,7 @@ docker compose -f platform/docker-compose.yml up -d          # start the platfor
 ./gradlew :reference-service:payment-stub:bootRun            # terminal 1, port 18081
 ./gradlew :reference-service:order-service:bootRun           # terminal 2, port 18080
 curl -X POST localhost:18080/orders -H 'Content-Type: application/json' -d '{"customerId":"c1","totalAmount":42.50}'
-k6 run load-tests/order-create.js                            # open-model load
+load-tests/run-k6.sh                                         # open-model load; results in Grafana
 ```
 
 ## Port map
@@ -40,9 +40,11 @@ Host ports use a lab-specific range so the lab runs next to other local stacks t
 | Kafka | 19092 | single-node KRaft |
 | Valkey | 16379 | |
 | Keycloak | 18180 | admin / admin |
-| Grafana | 13000 | admin / admin |
+| Grafana | 13000 | admin / admin; dashboard *JVM Lab — Service Overview* |
 | Prometheus | 19090 | |
-| OTLP gRPC / HTTP | 14317 / 14318 | order-service exports here |
+| OTLP gRPC / HTTP | 14317 / 14318 | traces and logs from the services |
+| Tempo API | 13200 | |
+| Pyroscope | 14040 | continuous profiling (WP-07) |
 | kind NodePort | 30080 | order-service in WP-09 |
 
 ## Layout
@@ -55,12 +57,17 @@ Host ports use a lab-specific range so the lab runs next to other local stacks t
 | `reference-service/payment-stub` | Downstream with adjustable latency, failure rate and concurrency limit |
 | `wp-01` … `wp-10` | Standalone experiments, lab checklist (README) and evidence (`notes/`) per work package |
 | `benchmarks/` | JMH suite (`./gradlew :benchmarks:jmh -Pjmh.includes=<regex>`) |
-| `load-tests/` | k6 scripts |
+| `load-tests/` | k6 scripts; `run-k6.sh` runs them in Docker and writes results to Prometheus |
 | `platform/` | docker compose, Toxiproxy config, kind/Kustomize manifests, observability |
 | `docs/` | Roadmap, ADRs, incident reports, interview-defense log, readiness scorecard |
 | `postman/` | Postman collection (orders, payment stub, Toxiproxy faults, actuator evidence, Keycloak) + `local`/`kind` environments |
 | `.github/` | CI/CD pipeline, CodeQL, Dependabot (see below) |
 | `scripts/diagnose.sh` | Capture a JVM evidence bundle (flags, heap, threads, NMT, JFR) from a PID |
+
+## Observability and measurement
+
+Metrics (scraped, with histograms and exemplars), traces (Tempo) and logs (Loki) are correlated by `trace_id`.
+Conventions and how-to: `platform/observability/README.md`; decisions: `docs/adrs/ADR-002-observability-and-measurement.md`.
 
 ## Postman
 

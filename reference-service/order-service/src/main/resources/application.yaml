@@ -21,6 +21,9 @@ server:
   port: 18080
   shutdown: graceful
 
+# Observability wiring (platform/observability/README.md):
+#   metrics -> Prometheus scrapes /actuator/prometheus (same path as Kubernetes; enables exemplars)
+#   traces  -> OTLP -> Tempo      logs -> OTLP -> Loki (with trace_id/span_id)
 management:
   endpoints:
     web:
@@ -30,20 +33,37 @@ management:
     health:
       probes:
         enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      # Real histograms, so p95/p99 are computed from buckets across instances (never average percentiles)
+      percentiles-histogram:
+        http.server.requests: true
+        hikaricp.connections.acquire: true
+      # Extra bucket boundaries at the SLO thresholds, so "% of requests under 200 ms" is exact
+      slo:
+        http.server.requests: 50ms, 100ms, 200ms, 500ms, 1s, 2s
+      minimum-expected-value:
+        http.server.requests: 1ms
+      maximum-expected-value:
+        http.server.requests: 10s
   tracing:
     sampling:
       probability: 1.0   # lab setting: trace every request
-  # Lab collector (platform/docker-compose.yml "observability"), not the default localhost:4318
   opentelemetry:
     tracing:
       export:
         otlp:
           endpoint: http://localhost:14318/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: http://localhost:14318/v1/logs
   otlp:
     metrics:
       export:
-        url: http://localhost:14318/v1/metrics
-        step: 10s
+        enabled: false   # metrics are scraped, not pushed
 
 lab:
   faults:

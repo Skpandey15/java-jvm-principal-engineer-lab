@@ -1,0 +1,11 @@
+# Grafana provisioning: loads every dashboard JSON in platform/observability/dashboards/ into a "JVM Lab" folder.
+# Mounted next to the image's own provider file (JVM Metrics and RED Metrics dashboards stay available).
+apiVersion: 1
+
+providers:
+  - name: JVM Lab
+    type: file
+    folder: JVM Lab
+    allowUiUpdates: true
+    options:
+      path: /otel-lgtm/lab-dashboards

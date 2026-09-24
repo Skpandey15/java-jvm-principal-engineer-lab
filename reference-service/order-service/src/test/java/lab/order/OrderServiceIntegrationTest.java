@@ -17,8 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Runs against a real PostgreSQL 18 container; skipped when Docker is not available. */
 @SpringBootTest(properties = {
-        "management.otlp.metrics.export.enabled=false",
-        "management.tracing.sampling.probability=0.0"})
+        "management.tracing.sampling.probability=0.0",
+        "management.logging.export.otlp.enabled=false"})
 @Testcontainers(disabledWithoutDocker = true)
 class OrderServiceIntegrationTest {
 

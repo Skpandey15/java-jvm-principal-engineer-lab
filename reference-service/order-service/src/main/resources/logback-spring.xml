@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Spring Boot defaults (console with [app,traceId,spanId] correlation) plus OTLP export to Loki.
+     The OTEL appender attaches the active trace/span id to every log record, which is what
+     lets Grafana jump from a trace in Tempo to its logs in Loki and back. -->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureMdcAttributes>*</captureMdcAttributes>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="OTEL"/>
+    </root>
+</configuration>

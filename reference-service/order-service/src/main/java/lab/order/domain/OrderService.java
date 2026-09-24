@@ -1,6 +1,8 @@
 package lab.order.domain;
 
 import lab.order.fault.FaultFlags;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +14,8 @@ import java.util.UUID;
 
 @Service
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     /** Deliberate leak target for WP-02; only written when the fault flag is on. */
     private static final List<PurchaseOrder> LEAKED_ORDERS = new ArrayList<>();
@@ -32,6 +36,7 @@ public class OrderService {
                 LEAKED_ORDERS.add(order);
             }
         }
+        log.info("Order created id={} customer={} amount={}", order.getId(), customerId, totalAmount);
         return order;
     }
 
