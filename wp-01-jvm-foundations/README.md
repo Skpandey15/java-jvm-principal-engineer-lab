@@ -17,8 +17,8 @@ Establish a precise mental model of Java execution from source code to bytecode,
 
 ## Hands-on labs
 
-- [ ] Lab 0 — Platform bootstrap: Gradle multi-project skeleton (Groovy DSL, version catalog, Java toolchain 25, convention plugins), Temurin 25, docker compose platform, reference-service skeleton running; record versions in ADR-000.
-- [ ] Compile/disassemble classes with javap and map source constructs (including records, switch patterns) to bytecode.
+- [x] Lab 0 — Platform bootstrap: Gradle multi-project skeleton (Groovy DSL, version catalog, Java toolchain 25, convention plugins), Temurin 25, docker compose platform, reference-service skeleton running; record versions in ADR-000.
+- [ ] Compile/disassemble classes with javap and map source constructs (including records, switch patterns) to bytecode. → [`labs/lab-01-javap.md`](labs/lab-01-javap.md)
 - [ ] Create a custom class-loading experiment and demonstrate class identity/class-loader boundaries.
 - [ ] Observe JVM startup/warm-up; compare cold vs warmed execution and the effect of an AOT cache.
 - [ ] Diagnostics primer: attach jcmd to the running service, take a thread dump, heap histogram and a 60-second JFR recording.
