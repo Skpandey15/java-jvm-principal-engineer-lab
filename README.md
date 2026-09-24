@@ -2,7 +2,7 @@
 
 A production-first lab for building Principal Engineer depth in Java/JVM internals, concurrency, data access,
 Spring Boot, diagnostics, Kubernetes and architecture. It follows the lab document
-`Java_JVM_Principal_Engineer_Lab_v1.1.docx`: 10 work packages, one evolving reference service.
+[`docs/lab-plan/Java_JVM_Principal_Engineer_Lab_v1.1.docx`](docs/lab-plan/Java_JVM_Principal_Engineer_Lab_v1.1.docx): 10 work packages, one evolving reference service.
 
 **Stack:** JDK 25 LTS · Gradle 9.8 (Groovy DSL) · Spring Boot 4.1.1 · PostgreSQL 18 · Kafka 4.2 · Valkey · Keycloak ·
 Toxiproxy · Grafana LGTM · JMH · k6 · kind. The reasons for each choice are in `docs/adrs/ADR-000-platform-and-versions.md`.
