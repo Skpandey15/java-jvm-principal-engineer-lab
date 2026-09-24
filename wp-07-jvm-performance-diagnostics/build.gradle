@@ -1,0 +1,5 @@
+plugins {
+    id 'lab.java-conventions'
+}
+
+description = 'WP-07 — JVM Performance & Production Diagnostics'

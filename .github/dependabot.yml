@@ -1,0 +1,27 @@
+# Monthly, grouped update PRs. ADR-000: versions change at phase boundaries, so merge these deliberately
+# (rerun the WP-02/WP-07 baselines after runtime or framework upgrades). Security updates still arrive immediately.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      gradle-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker-compose
+    directory: /platform
+    schedule:
+      interval: monthly
+    groups:
+      platform-images:
+        patterns: ['*']

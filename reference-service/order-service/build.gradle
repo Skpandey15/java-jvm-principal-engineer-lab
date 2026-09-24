@@ -1,0 +1,27 @@
+plugins {
+    id 'lab.spring-boot-conventions'
+}
+
+description = 'Reference service: orders over REST, persisted in PostgreSQL (grows through WP-01..WP-10).'
+
+dependencies {
+    implementation libs.boot.starter.webmvc
+    implementation libs.boot.starter.actuator
+    implementation libs.boot.starter.validation
+    implementation libs.boot.starter.data.jpa
+    implementation libs.boot.starter.flyway
+    implementation libs.boot.starter.opentelemetry
+    implementation libs.micrometer.registry.prometheus
+    implementation libs.flyway.postgresql
+    runtimeOnly libs.postgresql
+
+    // Added in later work packages (already in the version catalog):
+    //   WP-04/08  libs.boot.starter.kafka
+    //   WP-08     libs.boot.starter.cache, libs.caffeine, libs.boot.starter.data.redis,
+    //             libs.resilience4j.spring.boot, libs.boot.starter.oauth2.resource.server
+
+    testImplementation libs.boot.starter.test
+    testImplementation libs.boot.testcontainers
+    testImplementation libs.testcontainers.junit.jupiter
+    testImplementation libs.testcontainers.postgresql
+}

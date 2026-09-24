@@ -1,0 +1,9 @@
+# Local Kubernetes for WP-09:  kind create cluster --name jvm-lab --config platform/k8s/kind-config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # order-service NodePort
+        hostPort: 30080
+  - role: worker

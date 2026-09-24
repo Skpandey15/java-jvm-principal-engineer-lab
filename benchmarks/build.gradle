@@ -1,0 +1,9 @@
+plugins {
+    id 'lab.jmh-conventions'
+}
+
+description = 'JMH benchmark suite (WP-03, WP-05, WP-07).'
+
+dependencies {
+    jmh project(':wp-03-jmm-concurrency')
+}

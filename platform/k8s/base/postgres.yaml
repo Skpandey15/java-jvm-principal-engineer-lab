@@ -1,0 +1,55 @@
+# Lab-only PostgreSQL for the kind cluster (ephemeral storage: data is lost when the pod restarts).
+# Production would use a managed database or an operator; comparing those options is a WP-09/WP-10 ADR.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18.1
+          env:
+            - name: POSTGRES_DB
+              value: lab
+            - name: POSTGRES_USER
+              value: lab
+            - name: POSTGRES_PASSWORD
+              value: lab   # lab only; use a Secret from WP-08/09 onward
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "lab", "-d", "lab"]
+            periodSeconds: 3
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

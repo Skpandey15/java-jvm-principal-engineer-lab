@@ -1,0 +1,29 @@
+pluginManagement {
+    includeBuild 'build-logic'
+}
+
+plugins {
+    // Auto-provisions the JDK 25 (and JDK 27 comparison) toolchains if they are not installed.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'java-jvm-principal-engineer-lab'
+
+// Reference service (Section 4 of the lab document)
+include 'reference-service:order-service'
+include 'reference-service:payment-stub'
+
+// Standalone experiments per work package
+include 'wp-01-jvm-foundations',
+        'wp-02-memory-gc',
+        'wp-03-jmm-concurrency',
+        'wp-04-executors-virtual-threads-consumers',
+        'wp-05-collections-performance',
+        'wp-06-jdbc-jpa-hibernate-transactions',
+        'wp-07-jvm-performance-diagnostics',
+        'wp-08-spring-boot-production',
+        'wp-09-k8s-observability-slo',
+        'wp-10-principal-capstone'
+
+// JMH benchmark suite
+include 'benchmarks'

@@ -1,0 +1,91 @@
+# Local lab platform. Start everything:   docker compose -f platform/docker-compose.yml up -d
+# Start a subset:                          docker compose -f platform/docker-compose.yml up -d postgres observability
+# Image tags are pinned (ADR-000). Verified September 2026.
+#
+# Host ports use a lab-specific range (1xxxx/2xxxx) so the lab can run next to other local stacks
+# that already use the defaults (5432, 9092, 3000, 4317/4318, 8080...). Full map: README.md.
+name: jvm-lab
+
+services:
+  postgres:
+    image: postgres:18.1
+    environment:
+      POSTGRES_DB: lab
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+    # pg_stat_statements for WP-06 query evidence
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all"]
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d lab"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    # Single-node KRaft broker; version matches the Kafka client managed by Spring Boot 4.1.1
+    image: apache/kafka:4.2.1
+    ports:
+      - "19092:19092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:19092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:19092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  valkey:
+    image: valkey/valkey:9.0
+    ports:
+      - "16379:6379"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.4
+    command: ["start-dev"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "18180:8080"
+
+  toxiproxy:
+    # Fault injection in front of PostgreSQL and the payment stub (see toxiproxy/toxiproxy.json)
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    ports:
+      - "18474:8474"    # Toxiproxy API
+      - "25432:25432"   # -> postgres:5432
+      - "28081:28081"   # -> payment-stub on the host :18081
+    volumes:
+      - ./toxiproxy:/config:ro
+    # Docker Desktop / Rancher Desktop resolve host.docker.internal to the host machine already.
+    # On native Linux Docker, uncomment this so the payment proxy can reach the host:
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
+  observability:
+    # Grafana + Prometheus + Tempo + Loki + OpenTelemetry Collector in one container.
+    # order-service pushes metrics and traces over OTLP to localhost:14318.
+    image: grafana/otel-lgtm:0.33.1
+    ports:
+      - "13000:3000"    # Grafana (admin/admin)
+      - "14317:4317"    # OTLP gRPC
+      - "14318:4318"    # OTLP HTTP
+      - "19090:9090"    # Prometheus
+
+volumes:
+  postgres-data:

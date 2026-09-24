@@ -1,0 +1,31 @@
+# Used by the CI/CD pipeline's deploy job: the image built in the same run is pushed to kind's local
+# registry (helm/kind-action "registry: true" -> kind-registry:5000) and pulled by the cluster from there.
+#   kubectl apply -k platform/k8s/overlays/ci
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: lab/order-service
+    newName: kind-registry:5000/order-service
+    newTag: ci
+patches:
+  - target:
+      kind: Deployment
+      name: order-service
+    patch: |-
+      # One replica is enough for a smoke test on a CI runner
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      # No telemetry collector in the CI cluster
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED
+          value: "false"
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+          value: "0.0"

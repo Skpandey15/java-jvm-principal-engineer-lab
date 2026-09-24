@@ -1,0 +1,9 @@
+plugins {
+    // Compiles src/main/groovy/*.gradle into precompiled script (convention) plugins
+    id 'groovy-gradle-plugin'
+}
+
+dependencies {
+    implementation libs.spring.boot.gradle.plugin
+    implementation libs.jmh.gradle.plugin
+}

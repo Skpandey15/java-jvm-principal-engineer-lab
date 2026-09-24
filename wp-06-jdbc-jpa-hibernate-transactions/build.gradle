@@ -1,0 +1,5 @@
+plugins {
+    id 'lab.java-conventions'
+}
+
+description = 'WP-06 — JDBC, JPA, Hibernate & Transactions'

@@ -1,0 +1,50 @@
+# Single source of truth for versions (see docs/adrs/ADR-000-platform-and-versions.md).
+# Verified September 2026. The Spring Boot BOM manages most library versions;
+# only libraries it does not manage are pinned here.
+
+[versions]
+java = "25"
+java-comparison = "27"
+spring-boot = "4.1.1"
+junit = "6.0.3"            # same as the Spring Boot 4.1.1 BOM
+assertj = "3.27.7"         # same as the Spring Boot 4.1.1 BOM
+jmh = "1.37"
+jmh-gradle-plugin = "0.7.3"
+resilience4j = "2.4.0"
+
+[libraries]
+# Gradle plugins used by build-logic
+spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
+jmh-gradle-plugin = { module = "me.champeau.jmh:jmh-gradle-plugin", version.ref = "jmh-gradle-plugin" }
+
+# Testing for plain Java projects (Spring projects also get these from the Boot BOM)
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+# Spring Boot 4 starters (versions from the Boot BOM)
+boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
+boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
+boot-starter-kafka = { module = "org.springframework.boot:spring-boot-starter-kafka" }
+boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+boot-starter-cache = { module = "org.springframework.boot:spring-boot-starter-cache" }
+boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
+boot-starter-opentelemetry = { module = "org.springframework.boot:spring-boot-starter-opentelemetry" }
+boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
+
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+postgresql = { module = "org.postgresql:postgresql" }
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine" }
+resilience4j-spring-boot = { module = "io.github.resilience4j:resilience4j-spring-boot4", version.ref = "resilience4j" }
+
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka" }

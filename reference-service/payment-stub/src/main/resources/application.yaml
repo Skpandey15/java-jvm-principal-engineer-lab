@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: payment-stub
+
+server:
+  port: 18081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+
+lab:
+  payment:
+    latency-ms: 50
+    failure-rate: 0.0
+    max-concurrent: 20

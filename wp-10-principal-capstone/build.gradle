@@ -1,0 +1,5 @@
+plugins {
+    id 'lab.java-conventions'
+}
+
+description = 'WP-10 — Principal Architecture, Failure & Interview Lab'

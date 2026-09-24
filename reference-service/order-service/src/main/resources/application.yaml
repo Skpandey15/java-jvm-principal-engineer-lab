@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    # Point at localhost:25432 (Toxiproxy) instead to inject DB latency/failures.
+    url: jdbc:postgresql://localhost:15432/lab
+    username: lab
+    password: lab
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 2000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  threads:
+    virtual:
+      enabled: false   # WP-04: flip to compare platform vs virtual threads
+
+server:
+  port: 18080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0   # lab setting: trace every request
+  # Lab collector (platform/docker-compose.yml "observability"), not the default localhost:4318
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:14318/v1/traces
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:14318/v1/metrics
+        step: 10s
+
+lab:
+  faults:
+    retain-created-orders: false

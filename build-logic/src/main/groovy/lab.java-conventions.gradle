@@ -1,0 +1,57 @@
+// Applied to every Java project in the lab: JDK 25 toolchain, UTF-8, JUnit Platform,
+// plus run tasks for side-by-side experiments on the baseline and comparison JDKs.
+plugins {
+    id 'java'
+}
+
+def libs = extensions.getByType(VersionCatalogsExtension).named('libs')
+def javaVersion = { String alias -> JavaLanguageVersion.of(libs.findVersion(alias).get().requiredVersion.toInteger()) }
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = javaVersion('java')
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs.addAll(['-parameters', '-Xlint:all,-processing,-serial'])
+}
+
+dependencies {
+    testImplementation platform(libs.findLibrary('junit-bom').get())
+    testImplementation libs.findLibrary('junit-jupiter').get()
+    testImplementation libs.findLibrary('assertj-core').get()
+    testRuntimeOnly libs.findLibrary('junit-platform-launcher').get()
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat = 'full'
+    }
+}
+
+// Side-by-side JVM experiments, e.g.
+//   ./gradlew :wp-02-memory-gc:runOnBaselineJdk   -PmainClass=lab.wp02.AllocationPressure -PjvmArgs="-XX:+UseZGC -Xlog:gc"
+//   ./gradlew :wp-02-memory-gc:runOnComparisonJdk -PmainClass=lab.wp02.AllocationPressure -PjvmArgs="-XX:+UseZGC -Xlog:gc"
+def experimentMainClass = providers.gradleProperty('mainClass')
+def experimentJvmArgs = providers.gradleProperty('jvmArgs').map { String args -> args.split(' ').findAll { !it.isBlank() } }
+def mainRuntimeClasspath = sourceSets.main.runtimeClasspath
+
+[runOnBaselineJdk: 'java', runOnComparisonJdk: 'java-comparison'].each { String taskName, String alias ->
+    def launcher = javaToolchains.launcherFor { languageVersion = javaVersion(alias) }
+    tasks.register(taskName, JavaExec) {
+        group = 'lab'
+        description = "Runs -PmainClass on the '${alias}' toolchain from libs.versions.toml."
+        classpath = mainRuntimeClasspath
+        mainClass = experimentMainClass
+        jvmArgs(experimentJvmArgs.getOrElse([]))
+        javaLauncher = launcher
+    }
+}

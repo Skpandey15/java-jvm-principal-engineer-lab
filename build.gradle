@@ -1,0 +1,5 @@
+// Root project. Build logic lives in build-logic/ convention plugins (Groovy DSL):
+//   lab.java-conventions        JDK 25 toolchain, UTF-8, JUnit Platform, comparison-JDK run tasks
+//   lab.spring-boot-conventions Spring Boot 4.1 plugin + BOM
+//   lab.jmh-conventions         JMH benchmarks
+// Versions live in gradle/libs.versions.toml.

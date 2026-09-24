@@ -1,0 +1,5 @@
+plugins {
+    id 'lab.java-conventions'
+}
+
+description = 'WP-08 — Spring Boot Production Engineering'

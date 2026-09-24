@@ -1,0 +1,14 @@
+[
+  {
+    "name": "postgres",
+    "listen": "0.0.0.0:25432",
+    "upstream": "postgres:5432",
+    "enabled": true
+  },
+  {
+    "name": "payment",
+    "listen": "0.0.0.0:28081",
+    "upstream": "host.docker.internal:18081",
+    "enabled": true
+  }
+]

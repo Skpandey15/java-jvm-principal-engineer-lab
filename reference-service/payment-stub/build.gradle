@@ -1,0 +1,12 @@
+plugins {
+    id 'lab.spring-boot-conventions'
+}
+
+description = 'Controllable downstream dependency for timeout/retry/circuit-breaker labs (WP-04, WP-08, WP-10).'
+
+dependencies {
+    implementation libs.boot.starter.webmvc
+    implementation libs.boot.starter.actuator
+
+    testImplementation libs.boot.starter.test
+}

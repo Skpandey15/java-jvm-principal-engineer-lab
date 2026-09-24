@@ -1,0 +1,5 @@
+plugins {
+    id 'lab.java-conventions'
+}
+
+description = 'WP-01 — Java & JVM Foundations'

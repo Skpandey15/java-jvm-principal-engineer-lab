@@ -1,0 +1,253 @@
+# CI/CD pipeline for the lab.
+#
+#   build ─┬─> image ──> deploy-kind      (every PR and push to main)
+#          │      └────> publish          (push to main only: GHCR)
+#   validate
+#   dependency-review                      (PRs only)
+#
+# Third-party actions are pinned to full commit SHAs (tags can be moved); Dependabot keeps them current.
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write   # dependency graph submission (enables Dependabot alerts for Gradle dependencies)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # JDK 27 for the comparison toolchain; JDK 25 last so it is the default on PATH
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            27
+            25
+
+      # Caches Gradle, validates the wrapper jar, submits the dependency graph on main
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          dependency-graph: ${{ github.event_name == 'push' && 'generate-and-submit' || 'disabled' }}
+
+      # Unit + Testcontainers integration tests (Docker is available on ubuntu runners); also compiles the JMH suite
+      - name: Build
+        run: ./gradlew build :benchmarks:jmhJar --no-daemon
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+  validate:
+    name: Validate platform config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint GitHub workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+      - name: Validate docker compose
+        run: docker compose -f platform/docker-compose.yml config --quiet
+
+      - name: Render Kubernetes manifests
+        run: |
+          kubectl kustomize platform/k8s/base > /dev/null
+          kubectl kustomize platform/k8s/overlays/ci > /dev/null
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  image:
+    name: Build image, SBOM and scan
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write   # upload Trivy results to code scanning
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # Layered-jar Dockerfile on Temurin 25 (see platform/docker/spring-boot.Dockerfile for why not buildpacks)
+      - name: Build images
+        run: |
+          ./gradlew --no-daemon :reference-service:order-service:bootJar :reference-service:payment-stub:bootJar
+          for svc in order-service payment-stub; do
+            docker build -f platform/docker/spring-boot.Dockerfile \
+              --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+              --label "org.opencontainers.image.revision=$IMAGE_TAG" \
+              -t "lab/$svc:$IMAGE_TAG" "reference-service/$svc"
+          done
+
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: lab/order-service:${{ env.IMAGE_TAG }}
+          format: cyclonedx-json
+          artifact-name: order-service-sbom.cdx.json
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: lab/order-service:${{ env.IMAGE_TAG }}
+          format: sarif
+          output: trivy-order-service.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload scan results to code scanning
+        if: always() && hashFiles('trivy-order-service.sarif') != ''
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: trivy-order-service.sarif
+          category: trivy-order-service
+
+      # Gate: fail the pipeline on fixable CRITICAL vulnerabilities (HIGH is reported above, not blocking)
+      - name: Fail on critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: lab/order-service:${{ env.IMAGE_TAG }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          skip-setup-trivy: true
+
+      - name: Save images for the deploy and publish jobs
+        run: |
+          docker save \
+            "lab/order-service:$IMAGE_TAG" \
+            "lab/payment-stub:$IMAGE_TAG" \
+            | gzip > images.tar.gz
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: images
+          path: images.tar.gz
+          retention-days: 1
+
+  deploy-kind:
+    name: Deploy to kind and smoke test
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: images
+
+      # Local registry kind-registry:5000, reachable from the cluster; published on the runner as localhost:5000
+      - name: Create kind cluster
+        uses: helm/kind-action@06c1ae10762d3b9c1644e7fe69596ae519e015a2 # v1.15.0
+        with:
+          cluster_name: jvm-lab
+          config: platform/k8s/kind-config.yaml
+          registry: true
+
+      - name: Push image to the cluster registry
+        run: |
+          gunzip -c images.tar.gz | docker load
+          docker tag "lab/order-service:$IMAGE_TAG" localhost:5000/order-service:ci
+          docker push localhost:5000/order-service:ci
+
+      - name: Deploy
+        run: |
+          kubectl apply -k platform/k8s/overlays/ci
+          kubectl -n jvm-lab rollout status deployment/postgres --timeout=180s
+          kubectl -n jvm-lab rollout status deployment/order-service --timeout=300s
+
+      # NodePort 30080 is mapped to the runner by kind-config.yaml
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 30); do curl -sf localhost:30080/actuator/health > /dev/null && break; sleep 2; done
+          id=$(curl -sf -X POST localhost:30080/orders \
+                 -H 'Content-Type: application/json' \
+                 -d '{"customerId":"ci","totalAmount":42.50}' | jq -r .id)
+          curl -sf "localhost:30080/orders/$id" | jq -e '.status == "CREATED"'
+          curl -sf localhost:30080/actuator/health/readiness | jq -e '.status == "UP"'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:30080/orders \
+                   -H 'Content-Type: application/json' -d '{"customerId":"","totalAmount":0}')
+          test "$code" = 400
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n jvm-lab get pods -o wide
+          kubectl -n jvm-lab describe pods
+          kubectl -n jvm-lab logs deployment/order-service --tail=200 || true
+          kubectl -n jvm-lab get events --sort-by=.lastTimestamp
+
+  publish:
+    name: Publish images to GHCR
+    needs: [image, deploy-kind]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: images
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push (commit SHA + main)
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          gunzip -c images.tar.gz | docker load
+          registry="ghcr.io/${OWNER,,}/jvm-lab"
+          for svc in order-service payment-stub; do
+            for tag in "$IMAGE_TAG" main; do
+              docker tag "lab/$svc:$IMAGE_TAG" "$registry/$svc:$tag"
+              docker push "$registry/$svc:$tag"
+            done
+          done

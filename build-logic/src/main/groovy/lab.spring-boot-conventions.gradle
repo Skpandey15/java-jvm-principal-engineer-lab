@@ -1,0 +1,42 @@
+// Spring Boot 4.1 services: Boot plugin + Boot BOM imported as a Gradle platform.
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+import org.springframework.boot.gradle.tasks.run.BootRun
+
+plugins {
+    id 'lab.java-conventions'
+    id 'org.springframework.boot'
+}
+
+dependencies {
+    def bom = platform(SpringBootPlugin.BOM_COORDINATES)
+    implementation bom
+    annotationProcessor bom
+    testImplementation bom
+    developmentOnly bom
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+}
+
+springBoot {
+    buildInfo()
+}
+
+// Only the executable boot jar is produced; the Dockerfile copies build/libs/*.jar.
+tasks.named('jar') {
+    enabled = false
+}
+
+// Images are built from platform/docker/spring-boot.Dockerfile (see README). bootBuildImage (buildpacks)
+// stays available for comparison; its images do not pull on containerd-store Docker daemons (zero-size layer).
+tasks.named('bootBuildImage', BootBuildImage) {
+    imageName.set("lab/${project.name}:${project.version}-buildpacks".toString())
+}
+
+// Services run in UTC, as they do in containers. This also avoids legacy host zone IDs
+// (e.g. Windows' "Asia/Calcutta") that PostgreSQL rejects at connection time.
+tasks.withType(Test).configureEach {
+    systemProperty 'user.timezone', 'UTC'
+}
+tasks.named('bootRun', BootRun) {
+    jvmArgs '-Duser.timezone=UTC'
+}

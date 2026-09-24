@@ -1,0 +1,21 @@
+// JMH benchmarks (WP-03, WP-05, WP-07).
+//   ./gradlew :benchmarks:jmh                         run all
+//   ./gradlew :benchmarks:jmh -Pjmh.includes=HashMap  run matching benchmarks
+plugins {
+    id 'lab.java-conventions'
+    id 'me.champeau.jmh'
+}
+
+def libs = extensions.getByType(VersionCatalogsExtension).named('libs')
+def jmhIncludes = providers.gradleProperty('jmh.includes').orNull
+
+jmh {
+    jmhVersion = libs.findVersion('jmh').get().requiredVersion
+    if (jmhIncludes) {
+        includes = [jmhIncludes]
+    }
+    warmupIterations = 3
+    iterations = 5
+    fork = 2
+    resultFormat = 'JSON'
+}

@@ -1,0 +1,5 @@
+plugins {
+    id 'lab.java-conventions'
+}
+
+description = 'WP-09 — Containers, Kubernetes, Observability & SLOs'

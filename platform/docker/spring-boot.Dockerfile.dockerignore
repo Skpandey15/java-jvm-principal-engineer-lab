@@ -1,0 +1,3 @@
+# Build contexts are service directories; only the boot jar is needed.
+*
+!build/libs/*.jar
