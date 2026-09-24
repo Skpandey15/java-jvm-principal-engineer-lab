@@ -8,7 +8,7 @@ name: jvm-lab
 
 services:
   postgres:
-    image: postgres:18.1
+    image: postgres:18.4
     environment:
       POSTGRES_DB: lab
       POSTGRES_USER: lab
@@ -28,7 +28,7 @@ services:
 
   kafka:
     # Single-node KRaft broker; version matches the Kafka client managed by Spring Boot 4.1.1
-    image: apache/kafka:4.2.1
+    image: apache/kafka:4.3.1
     ports:
       - "19092:19092"
     environment:
@@ -47,7 +47,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
   valkey:
-    image: valkey/valkey:9.0
+    image: valkey/valkey:9.1
     ports:
       - "16379:6379"
 
