@@ -25,6 +25,23 @@ curl -X POST localhost:18080/orders -H 'Content-Type: application/json' -d '{"cu
 load-tests/run-k6.sh                                         # open-model load; results in Grafana
 ```
 
+## ShopFlow (the reference service)
+
+A realistic e-commerce API on Spring Boot 4.1 + JPA/Hibernate + PostgreSQL, seeded locally with 10k customers,
+5k products and 200k orders. Healthy baseline: `docs/baselines/shopflow-baseline-2026-09-26.md`.
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /orders` | Create an order (`{"customerId":42,"lines":[{"productId":100,"quantity":2}]}`); reserves stock |
+| `GET /orders/{id}` · `POST /orders/{id}/pay` · `POST /orders/{id}/cancel` | Read, pay (calls payment-stub), cancel (releases stock) |
+| `GET /products?category=Books&q=Smart&page=0&size=20` · `GET /products/{id}` | Catalog search and detail with stock |
+| `GET /customers/{id}` · `GET /customers/{id}/orders?page=0&size=10` | Customer and paged order history |
+| `GET /reports/daily-sales?from=2026-08-27&to=2026-09-26` | Paid orders and revenue per day |
+
+**Run it (Windows):** `scripts\start-shopflow.cmd` (starts payment-stub and ShopFlow in their own windows, from a
+copy of the jars so rebuilding never touches a running JVM). **Load it:** `load-tests\jmeterun-jmeter.cmd`
+(JMeter open model; `-JorderRate=20 -JdurationMin=10` to change the load; HTML report path is printed at the end).
+
 ## Port map
 
 Host ports use a lab-specific range so the lab runs next to other local stacks that already use the defaults.

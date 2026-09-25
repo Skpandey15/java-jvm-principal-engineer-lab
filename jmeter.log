@@ -1,0 +1,20 @@
+2026-09-26 00:19:12,905 INFO o.a.j.u.JMeterUtils: Setting Locale to en_EN
+2026-09-26 00:19:12,924 INFO o.a.j.JMeter: Loading user properties from: C:\Users\skp4j\tools\jmeter\bin\user.properties
+2026-09-26 00:19:12,925 INFO o.a.j.JMeter: Loading system properties from: C:\Users\skp4j\tools\jmeter\bin\system.properties
+2026-09-26 00:19:12,932 INFO o.a.j.JMeter: Copyright (c) 1998-2024 The Apache Software Foundation
+2026-09-26 00:19:12,932 INFO o.a.j.JMeter: Version 5.6.3
+2026-09-26 00:19:12,932 INFO o.a.j.JMeter: java.version=26
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: java.vm.name=Java HotSpot(TM) 64-Bit Server VM
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: os.name=Windows 11
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: os.arch=amd64
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: os.version=10.0
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: file.encoding=UTF-8
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: java.awt.headless=null
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: Max memory     =1073741824
+2026-09-26 00:19:12,933 INFO o.a.j.JMeter: Available Processors =12
+2026-09-26 00:19:12,948 INFO o.a.j.JMeter: Default Locale=English (EN)
+2026-09-26 00:19:12,949 INFO o.a.j.JMeter: JMeter  Locale=English (EN)
+2026-09-26 00:19:12,949 INFO o.a.j.JMeter: JMeterHome=C:\Users\skp4j\tools\jmeter
+2026-09-26 00:19:12,949 INFO o.a.j.JMeter: user.dir  =D:\Principal_Engineer\Java_JVM_Principal_Engineer_Lab\java-jvm-principal-engineer-lab
+2026-09-26 00:19:12,949 INFO o.a.j.JMeter: PWD       =D:\Principal_Engineer\Java_JVM_Principal_Engineer_Lab\java-jvm-principal-engineer-lab
+2026-09-26 00:19:12,958 INFO o.a.j.JMeter: IP: 192.168.1.6 Name: Sunil FullName: Sunil
