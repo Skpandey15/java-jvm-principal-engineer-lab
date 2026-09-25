@@ -26,6 +26,7 @@ Thumbs.db
 # Raw run logs from incident drills (keep summaries, GC logs and MAT reports instead)
 wp-*/notes/**/service.log
 wp-*/notes/**/k6.log
+wp-*/notes/**/jmeter-console.log
 
 # JMeter writes jmeter.log into the working directory
 jmeter.log
