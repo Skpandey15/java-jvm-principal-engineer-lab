@@ -204,11 +204,11 @@ jobs:
           for _ in $(seq 1 30); do curl -sf localhost:30080/actuator/health > /dev/null && break; sleep 2; done
           id=$(curl -sf -X POST localhost:30080/orders \
                  -H 'Content-Type: application/json' \
-                 -d '{"customerId":"ci","totalAmount":42.50}' | jq -r .id)
+                 -d '{"customerId":1,"lines":[{"productId":1,"quantity":2}]}' | jq -r .id)
           curl -sf "localhost:30080/orders/$id" | jq -e '.status == "CREATED"'
           curl -sf localhost:30080/actuator/health/readiness | jq -e '.status == "UP"'
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:30080/orders \
-                   -H 'Content-Type: application/json' -d '{"customerId":"","totalAmount":0}')
+                   -H 'Content-Type: application/json' -d '{"customerId":null,"lines":[]}')
           test "$code" = 400
 
       - name: Diagnostics on failure

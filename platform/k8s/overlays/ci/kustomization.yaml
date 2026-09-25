@@ -18,6 +18,12 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 1
+      # Reference data only: no 200k-order bulk seed on a CI runner
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: LAB_SEED_ENABLED
+          value: "false"
       # No telemetry collector in the CI cluster
       - op: add
         path: /spec/template/spec/containers/0/env/-

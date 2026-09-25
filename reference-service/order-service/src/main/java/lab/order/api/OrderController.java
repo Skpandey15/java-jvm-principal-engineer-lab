@@ -1,10 +1,10 @@
 package lab.order.api;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import lab.order.api.ApiModels.CreateOrderRequest;
+import lab.order.api.ApiModels.OrderResponse;
 import lab.order.domain.OrderService;
+import lab.order.domain.OrderService.LineRequest;
 import lab.order.domain.PurchaseOrder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,40 +14,38 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
 import java.net.URI;
-import java.time.Instant;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/orders")
-public class OrderController {
+class OrderController {
 
     private final OrderService orders;
 
-    public OrderController(OrderService orders) {
+    OrderController(OrderService orders) {
         this.orders = orders;
     }
 
     @PostMapping
-    public ResponseEntity<OrderResponse> create(@Valid @RequestBody CreateOrderRequest request) {
-        PurchaseOrder order = orders.create(request.customerId(), request.totalAmount());
+    ResponseEntity<OrderResponse> create(@Valid @RequestBody CreateOrderRequest request) {
+        PurchaseOrder order = orders.create(request.customerId(),
+                request.lines().stream().map(l -> new LineRequest(l.productId(), l.quantity())).toList());
         return ResponseEntity.created(URI.create("/orders/" + order.getId())).body(OrderResponse.from(order));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> get(@PathVariable UUID id) {
-        return ResponseEntity.of(orders.find(id).map(OrderResponse::from));
+    OrderResponse get(@PathVariable UUID id) {
+        return OrderResponse.from(orders.find(id));
     }
 
-    public record CreateOrderRequest(
-            @NotBlank String customerId,
-            @NotNull @DecimalMin("0.01") BigDecimal totalAmount) {
+    @PostMapping("/{id}/pay")
+    OrderResponse pay(@PathVariable UUID id) {
+        return OrderResponse.from(orders.pay(id));
     }
 
-    public record OrderResponse(UUID id, String customerId, BigDecimal totalAmount, String status, Instant createdAt) {
-        static OrderResponse from(PurchaseOrder o) {
-            return new OrderResponse(o.getId(), o.getCustomerId(), o.getTotalAmount(), o.getStatus().name(), o.getCreatedAt());
-        }
+    @PostMapping("/{id}/cancel")
+    OrderResponse cancel(@PathVariable UUID id) {
+        return OrderResponse.from(orders.cancel(id));
     }
 }

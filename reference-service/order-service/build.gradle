@@ -6,6 +6,7 @@ description = 'Reference service: orders over REST, persisted in PostgreSQL (gro
 
 dependencies {
     implementation libs.boot.starter.webmvc
+    implementation libs.boot.starter.restclient
     implementation libs.boot.starter.actuator
     implementation libs.boot.starter.validation
     implementation libs.boot.starter.data.jpa
@@ -13,6 +14,7 @@ dependencies {
     implementation libs.boot.starter.opentelemetry
     implementation libs.micrometer.registry.prometheus
     implementation libs.otel.logback.appender
+    implementation libs.datasource.micrometer   // a trace span per SQL statement (makes N+1 visible)
     implementation libs.flyway.postgresql
     runtimeOnly libs.postgresql
 

@@ -28,10 +28,12 @@ export const options = {
 };
 
 export default function () {
-  const body = JSON.stringify({
-    customerId: `customer-${Math.floor(Math.random() * 1000)}`,
-    totalAmount: (Math.random() * 500 + 1).toFixed(2),
-  });
+  // Seeded data: customers 1..10010, products 1..5050 (see db/seed/bulk-seed.sql)
+  const lines = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => ({
+    productId: 1 + Math.floor(Math.random() * 5050),
+    quantity: 1 + Math.floor(Math.random() * 3),
+  }));
+  const body = JSON.stringify({ customerId: 1 + Math.floor(Math.random() * 10010), lines });
   const res = http.post(`${BASE_URL}/orders`, body, { headers: { 'Content-Type': 'application/json' } });
   check(res, { 'status is 201': (r) => r.status === 201 });
 }

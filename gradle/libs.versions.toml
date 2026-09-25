@@ -11,6 +11,7 @@ assertj = "3.27.7"         # same as the Spring Boot 4.1.1 BOM
 jmh = "1.37"
 jmh-gradle-plugin = "0.7.3"
 resilience4j = "2.4.0"
+datasource-micrometer = "2.3.0"            # built against Spring Boot 4.1.1
 otel-logback-appender = "2.28.0-alpha"   # requires OpenTelemetry API 1.62.0 = the version Boot 4.1.1 manages
 # Security override (ADR-001): Boot 4.1.1 manages 11.0.24, which has 3 critical CVEs fixed in 11.0.25.
 # Remove this and the constraints in lab.spring-boot-conventions once Spring Boot manages >= 11.0.25.
@@ -33,6 +34,7 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 # Spring Boot 4 starters (versions from the Boot BOM)
 boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+boot-starter-restclient = { module = "org.springframework.boot:spring-boot-starter-restclient" }
 boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
@@ -52,6 +54,7 @@ tomcat-embed-el = { module = "org.apache.tomcat.embed:tomcat-embed-el", version.
 tomcat-embed-websocket = { module = "org.apache.tomcat.embed:tomcat-embed-websocket", version.ref = "tomcat" }
 
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+datasource-micrometer = { module = "net.ttddyy.observation:datasource-micrometer-spring-boot", version.ref = "datasource-micrometer" }
 otel-logback-appender = { module = "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0", version.ref = "otel-logback-appender" }
 postgresql = { module = "org.postgresql:postgresql" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }

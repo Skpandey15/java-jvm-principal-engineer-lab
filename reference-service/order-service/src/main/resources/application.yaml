@@ -13,6 +13,15 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50          # INSERT order lines in batches (needs the pooled sequence, not IDENTITY)
+        order_inserts: true
+        order_updates: true
+  mvc:
+    problemdetails:
+      enabled: true               # RFC 9457 error bodies, including validation errors
   threads:
     virtual:
       enabled: false   # WP-04: flip to compare platform vs virtual threads
@@ -66,5 +75,16 @@ management:
         enabled: false   # metrics are scraped, not pushed
 
 lab:
+  seed:
+    enabled: true                 # ~200k orders on first start (db/seed/bulk-seed.sql); off in tests and CI
+  payment:
+    base-url: http://localhost:18081   # payment-stub; use :28081 to go through Toxiproxy
+    connect-timeout: 1s
+    read-timeout: 2s
   faults:
     retain-created-orders: false
+
+# SQL statements appear as spans inside each request trace (datasource-micrometer)
+jdbc:
+  datasource-proxy:
+    include-parameter-values: false

@@ -1,13 +1,13 @@
 {
   "info": {
     "name": "Java JVM Principal Engineer Lab",
-    "description": "Requests for the lab's reference service, fault injection and runtime evidence.\n\nImport this file plus an environment from `postman/`, then select **jvm-lab local** (or **jvm-lab kind** for the WP-09 cluster). Ports follow the port map in README.md.\n\nCommand line: `npx newman run postman/jvm-lab.postman_collection.json -e postman/local.postman_environment.json`",
+    "description": "Requests for ShopFlow (the lab's reference service), fault injection and runtime evidence.\n\nImport this file plus an environment from `postman/`, then select **jvm-lab local** (or **jvm-lab kind** for the WP-09 cluster). Ports follow the port map in README.md.\n\nCommand line: `npx newman run postman/jvm-lab.postman_collection.json -e postman/local.postman_environment.json`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "Orders",
-      "description": "order-service REST API (reference service, all WPs).",
+      "description": "ShopFlow orders: create (reserves stock), get, pay (calls payment-stub), cancel (releases stock).",
       "item": [
         {
           "name": "Create order",
@@ -22,14 +22,14 @@
             "url": "{{orderServiceUrl}}/orders",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"totalAmount\": 42.5\n}",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"lines\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    },\n    {\n      \"productId\": 51,\n      \"quantity\": 1\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Creates an order and stores its id in the `orderId` collection variable for the following requests."
+            "description": "Reserves stock for every line in one transaction and stores the new id in `orderId`."
           },
           "event": [
             {
@@ -40,6 +40,7 @@
                   "pm.test('status is 201', () => pm.response.to.have.status(201));",
                   "const order = pm.response.json();",
                   "pm.test('status is CREATED', () => pm.expect(order.status).to.eql('CREATED'));",
+                  "pm.test('two lines with prices', () => pm.expect(order.lines).to.have.lengthOf(2));",
                   "pm.test('Location header points at the order', () => pm.expect(pm.response.headers.get('Location')).to.eql('/orders/' + order.id));",
                   "pm.collectionVariables.set('orderId', order.id);"
                 ]
@@ -52,8 +53,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{orderServiceUrl}}/orders/{{orderId}}",
-            "description": "Run **Create order** first."
+            "url": "{{orderServiceUrl}}/orders/{{orderId}}"
           },
           "event": [
             {
@@ -69,7 +69,170 @@
           ]
         },
         {
-          "name": "Get unknown order (404)",
+          "name": "Pay order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{orderServiceUrl}}/orders/{{orderId}}/pay",
+            "description": "Calls payment-stub outside the DB transaction. Requires payment-stub on :18081."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('PAID', () => pm.expect(pm.response.json().status).to.eql('PAID'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay again (409)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{orderServiceUrl}}/orders/{{orderId}}/pay",
+            "description": "An order can be paid only once."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create and cancel order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{orderServiceUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"lines\": [\n    {\n      \"productId\": 52,\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('cancelOrderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{orderServiceUrl}}/orders/{{cancelOrderId}}/cancel",
+            "description": "Releases the reserved stock."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('CANCELLED', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Insufficient stock (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{orderServiceUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"lines\": [\n    {\n      \"productId\": 50,\n      \"quantity\": 6\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Reference product 50 has only 5 units."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation error (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{orderServiceUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": null,\n  \"lines\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown order (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -86,28 +249,149 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "description": "Product search (paged, one stock query per page) and product detail.",
+      "item": [
+        {
+          "name": "Search products by category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/products?category=Books&page=0&size=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has products with stock', () => pm.expect(pm.response.json().content[0]).to.have.property('available'));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Create order - validation error (400)",
+          "name": "Search by category and name prefix",
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/products?category=Electronics&q=Smart"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
               }
-            ],
-            "url": "{{orderServiceUrl}}/orders",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"customerId\": \"\",\n  \"totalAmount\": 0\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
+            }
+          ]
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/products/{{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
               }
-            },
-            "description": "Blank customer and zero amount violate the bean-validation constraints."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "description": "Customer detail and order history (the N+1 hotspot in WP-06).",
+      "item": [
+        {
+          "name": "Get customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/customers/{{customerId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Order history (newest first)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/customers/{{customerId}}/orders?page=0&size=10",
+            "description": "Two SQL statements per page in the healthy version: order ids, then orders with lines and products."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('paged', () => pm.expect(pm.response.json()).to.have.property('totalElements'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "description": "Aggregates in SQL (JdbcClient).",
+      "item": [
+        {
+          "name": "Daily sales, last 30 days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/reports/daily-sales?from={{reportFrom}}&to={{reportTo}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('one row per day', () => pm.expect(pm.response.json().length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Report range too long (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderServiceUrl}}/reports/daily-sales?from=2024-01-01&to=2026-01-01"
           },
           "event": [
             {
@@ -722,7 +1006,23 @@
   "variable": [
     {
       "key": "customerId",
-      "value": "customer-1"
+      "value": "42"
+    },
+    {
+      "key": "productId",
+      "value": "100"
+    },
+    {
+      "key": "cancelOrderId",
+      "value": ""
+    },
+    {
+      "key": "reportFrom",
+      "value": "2026-08-27"
+    },
+    {
+      "key": "reportTo",
+      "value": "2026-09-26"
     },
     {
       "key": "orderId",
