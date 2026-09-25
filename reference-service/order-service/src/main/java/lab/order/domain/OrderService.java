@@ -1,6 +1,7 @@
 package lab.order.domain;
 
 import lab.order.fault.FaultFlags;
+import lab.order.receipt.ReceiptCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,12 @@ public class OrderService {
 
     private final PurchaseOrderRepository repository;
     private final FaultFlags faults;
+    private final ReceiptCache receipts;
 
-    public OrderService(PurchaseOrderRepository repository, FaultFlags faults) {
+    public OrderService(PurchaseOrderRepository repository, FaultFlags faults, ReceiptCache receipts) {
         this.repository = repository;
         this.faults = faults;
+        this.receipts = receipts;
     }
 
     @Transactional
@@ -36,6 +39,7 @@ public class OrderService {
                 LEAKED_ORDERS.add(order);
             }
         }
+        receipts.remember(order);
         log.info("Order created id={} customer={} amount={}", order.getId(), customerId, totalAmount);
         return order;
     }

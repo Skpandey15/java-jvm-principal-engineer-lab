@@ -19,3 +19,10 @@ evidence/
 # OS
 .DS_Store
 Thumbs.db
+
+# Eclipse MAT index/cache files next to heap dumps (regenerated when a dump is opened)
+*.index
+*.threads
+# Raw run logs from incident drills (keep summaries, GC logs and MAT reports instead)
+wp-*/notes/**/service.log
+wp-*/notes/**/k6.log
