@@ -39,7 +39,7 @@ A realistic e-commerce API on Spring Boot 4.1 + JPA/Hibernate + PostgreSQL, seed
 | `GET /reports/daily-sales?from=2026-08-27&to=2026-09-26` | Paid orders and revenue per day |
 
 **Run it (Windows):** `scripts\start-shopflow.cmd` (starts payment-stub and ShopFlow in their own windows, from a
-copy of the jars so rebuilding never touches a running JVM). **Load it:** `load-tests\jmeterun-jmeter.cmd`
+copy of the jars so rebuilding never touches a running JVM). **Load it:** `load-tests\jmeter\run-jmeter.cmd`
 (JMeter open model; `-JorderRate=20 -JdurationMin=10` to change the load; HTML report path is printed at the end).
 
 ## Port map
