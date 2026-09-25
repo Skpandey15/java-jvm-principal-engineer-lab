@@ -25,6 +25,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, UU
             countQuery = "select count(o) from PurchaseOrder o where o.customer.id = :customerId")
     Page<UUID> findIdsByCustomer(Long customerId, Pageable pageable);
 
+    Page<PurchaseOrder> findByCustomerIdOrderByCreatedAtDesc(Long customerId, Pageable pageable);
+
     /** Step 2 of paged history: that page's orders with lines and products in one statement. */
     @EntityGraph(attributePaths = {"lines", "lines.product"})
     @Query("select o from PurchaseOrder o where o.id in :ids")

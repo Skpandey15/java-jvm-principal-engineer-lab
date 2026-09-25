@@ -6,6 +6,7 @@ import lab.order.catalog.ProductRepository;
 import lab.order.customer.Customer;
 import lab.order.customer.CustomerRepository;
 import lab.order.fault.FaultFlags;
+import lab.order.incident.Incidents;
 import lab.order.payment.PaymentClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,10 +42,11 @@ public class OrderService {
     private final PaymentClient payments;
     private final TransactionTemplate transactions;
     private final FaultFlags faults;
+    private final Incidents incidents;
 
     public OrderService(PurchaseOrderRepository orders, CustomerRepository customers, ProductRepository products,
                         InventoryRepository inventory, PaymentClient payments, TransactionTemplate transactions,
-                        FaultFlags faults) {
+                        FaultFlags faults, Incidents incidents) {
         this.orders = orders;
         this.customers = customers;
         this.products = products;
@@ -52,6 +54,7 @@ public class OrderService {
         this.payments = payments;
         this.transactions = transactions;
         this.faults = faults;
+        this.incidents = incidents;
     }
 
     public record LineRequest(Long productId, int quantity) {
@@ -108,6 +111,13 @@ public class OrderService {
     public Page<PurchaseOrder> history(Long customerId, Pageable pageable) {
         if (!customers.existsById(customerId)) {
             throw new NotFoundException("customer", customerId);
+        }
+        if (incidents.isActive("inc-002")) {
+            // Load the page of orders directly, then touch the lines and products while the
+            // transaction is still open, so the API layer can render them.
+            Page<PurchaseOrder> page = orders.findByCustomerIdOrderByCreatedAtDesc(customerId, pageable);
+            page.forEach(order -> order.getLines().forEach(line -> line.getProduct().getName()));
+            return page;
         }
         Page<UUID> ids = orders.findIdsByCustomer(customerId, pageable);
         Map<UUID, PurchaseOrder> loaded = orders.findAllWithLinesByIdIn(ids.getContent()).stream()
