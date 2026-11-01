@@ -52,7 +52,7 @@ services:
       - "16379:6379"
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.4
+    image: quay.io/keycloak/keycloak:26.8.1-2
     command: ["start-dev"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -62,7 +62,7 @@ services:
 
   toxiproxy:
     # Fault injection in front of PostgreSQL and the payment stub (see toxiproxy/toxiproxy.json)
-    image: ghcr.io/shopify/toxiproxy:2.12.0
+    image: ghcr.io/shopify/toxiproxy:2.13.0
     command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
     ports:
       - "18474:8474"    # Toxiproxy API
@@ -91,7 +91,7 @@ services:
   observability:
     # Grafana + Prometheus + Tempo + Loki + Pyroscope + OpenTelemetry Collector in one container.
     # Metrics: Prometheus scrapes the services (prometheus.yaml). Traces and logs: services push OTLP to :14318.
-    image: grafana/otel-lgtm:0.33.1
+    image: grafana/otel-lgtm:0.38.1
     ports:
       - "13000:3000"    # Grafana (admin/admin)
       - "14317:4317"    # OTLP gRPC
